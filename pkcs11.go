@@ -14,6 +14,7 @@ import (
 	"os"
 
 	"fmt"
+
 	"github.com/miekg/pkcs11"
 )
 
@@ -136,7 +137,7 @@ func GetPublic(p *pkcs11.Ctx, s pkcs11.SessionHandle, ckaId []byte) (pub crypto.
 			pkcs11.NewAttribute(pkcs11.CKA_EC_POINT, nil),
 		}
 	default:
-		err = fmt.Errorf("Unknown public key type (%s)", ktype)
+		err = fmt.Errorf("Unknown public key type (%v)", ktype)
 		return
 	}
 
@@ -320,7 +321,7 @@ func SelectSlot(p *pkcs11.Ctx) (slot uint, err error) {
 	// Get slots
 	slots, err := p.GetSlotList(true)
 	if err != nil {
-		fmt.Printf("GetSlotList failed (%v)\n", err)
+		err = fmt.Errorf("failed to get list of slots (%w)\n", err)
 		return
 	}
 
@@ -334,21 +335,22 @@ func SelectSlot(p *pkcs11.Ctx) (slot uint, err error) {
 	for i, sl := range slots {
 		si, err := p.GetTokenInfo(sl)
 		if err != nil {
-			fmt.Println("Cloud not retrieve information about token", sl)
+			err = fmt.Errorf("could not retrieve information about token (%v): %w", sl, err)
+			return 0, err
 		}
 		fmt.Printf("[%v] %v (%v)\n", i, si.Label, si.ManufacturerID)
 	}
 
 	// Ask to select slot
 	/*
-	for {
-		inp := input.Input{Label: "Slot", Required: true}
-		i := inp.Int(0)
-		if i < len(slots) {
-			slot = slots[i]
-			break
-		}
-	}*/
+		for {
+			inp := input.Input{Label: "Slot", Required: true}
+			i := inp.Int(0)
+			if i < len(slots) {
+				slot = slots[i]
+				break
+			}
+		}*/
 
 	return
 }
@@ -362,18 +364,16 @@ func SlotInfo(p *pkcs11.Ctx, s uint, skipVerify bool) (err error) {
 	}
 
 	// Enter serial number
-	if !skipVerify && len(t.SerialNumber) > 0 {
-		/*
-		for {
-			inp := input.Input{Label: "Enter the device serial number for verification", Required: true}
-			if t.SerialNumber != string(inp.String("")) {
-				fmt.CPrintln(fmt.Red, "Invalid serial number!")
-				continue
-			}
-			break
-		}
-		*/
-	}
+	// if !skipVerify && len(t.SerialNumber) > 0 {
+	// 	for {
+	// 		inp := input.Input{Label: "Enter the device serial number for verification", Required: true}
+	// 		if t.SerialNumber != string(inp.String("")) {
+	// 			fmt.CPrintln(fmt.Red, "Invalid serial number!")
+	// 			continue
+	// 		}
+	// 		break
+	// 	}
+	// }
 
 	// Print and log slot details
 	fmt.Println("Information about selected slot:")
@@ -401,13 +401,13 @@ func CreateSession(p *pkcs11.Ctx, slot uint, pw string, rw bool) (s pkcs11.Sessi
 	if rw {
 		s, err = p.OpenSession(slot, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 		if err != nil {
-			err = fmt.Errorf("Opening session with flags CKF_SERIAL_SESSION and CKF_RW_SESSION failed: %v", err.Error())
+			err = fmt.Errorf("opening session with flags CKF_SERIAL_SESSION and CKF_RW_SESSION failed: %v", err.Error())
 			return
 		}
 	} else {
 		s, err = p.OpenSession(slot, pkcs11.CKF_SERIAL_SESSION)
 		if err != nil {
-			err = fmt.Errorf("Opening session with flags CKF_SERIAL_SESSION failed: %v", err.Error())
+			err = fmt.Errorf("opening session with flags CKF_SERIAL_SESSION failed: %v", err.Error())
 			return
 		}
 	}
@@ -415,7 +415,7 @@ func CreateSession(p *pkcs11.Ctx, slot uint, pw string, rw bool) (s pkcs11.Sessi
 	// Login
 	err = p.Login(s, pkcs11.CKU_USER, pw)
 	if err != nil {
-		err = fmt.Errorf("Login with user type CKU_USER failed: %s", err.Error())
+		err = fmt.Errorf("login with user type CKU_USER failed: %s", err.Error())
 		return
 	}
 
@@ -431,14 +431,14 @@ func GetCert(p *pkcs11.Ctx, s pkcs11.SessionHandle, ckaId []byte) (cert *x509.Ce
 
 	// If we have multiple certificates with the same ckaID, ask to select one
 	if len(objs) > 1 {
-		fmt.Println("Select the certificate that you would like to use:")
+		fmt.Println("Which certificate would you like to use:")
 
 		// For each certificate
 		certs := make(map[int]*x509.Certificate, len(objs))
 		for i, o := range objs {
 			certs[i], err = x509.ParseCertificate(o.Value)
 			if err != nil {
-				err = fmt.Errorf("Error parsing certificate data from PKCS#11: %s", err.Error())
+				err = fmt.Errorf("error parsing certificate data from PKCS#11: %s", err.Error())
 				break
 			}
 			fmt.Printf("[%d] %x [%s] (%s)\n", i, certs[i].Subject.CommonName, certs[i].SubjectKeyId, certs[i].Issuer.CommonName)
@@ -456,7 +456,7 @@ func GetCert(p *pkcs11.Ctx, s pkcs11.SessionHandle, ckaId []byte) (cert *x509.Ce
 		id = objs[0].ckaId // set ckaid of returned object
 		cert, err = x509.ParseCertificate(objs[0].Value)
 		if err != nil {
-			err = fmt.Errorf("Error parsing certificate data from PKCS#11: %s", err.Error())
+			err = fmt.Errorf("error parsing certificate data from PKCS#11: %s", err.Error())
 			return
 		}
 	}
@@ -477,7 +477,7 @@ func ImportCert(p *pkcs11.Ctx, s pkcs11.SessionHandle, cert *x509.Certificate, c
 	}
 	object, err = p.CreateObject(s, template)
 	if err != nil {
-		err = fmt.Errorf("Failed to import certificate: %s", err.Error())
+		err = fmt.Errorf("failed to import certificate: %s", err.Error())
 		return
 	}
 	return

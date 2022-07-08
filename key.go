@@ -73,8 +73,6 @@ func CreateKey(p *pkcs11.Ctx, s pkcs11.SessionHandle, k Key) (pub pkcs11.ObjectH
 
 	var mechanism *pkcs11.Mechanism
 	switch k.Type {
-	default:
-		err = fmt.Errorf("Configured key type '%s' is supported", k.Type)
 	case "EC":
 		mechanism = pkcs11.NewMechanism(pkcs11.CKM_EC_KEY_PAIR_GEN, nil)
 		pubTemplate = append(pubTemplate, pkcs11.NewAttribute(pkcs11.CKA_EC_PARAMS, derCurve))
@@ -93,6 +91,10 @@ func CreateKey(p *pkcs11.Ctx, s pkcs11.SessionHandle, k Key) (pub pkcs11.ObjectH
 		mechanism = pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_KEY_PAIR_GEN, nil)
 		pubTemplate = append(pubTemplate, pkcs11.NewAttribute(pkcs11.CKA_MODULUS_BITS, k.Public.ModulesBits))
 		pubTemplate = append(pubTemplate, pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, k.Public.Exponent.Bytes()))
+
+	default:
+		err = fmt.Errorf("Configured key type '%s' is supported", k.Type)
+		return
 	}
 
 	pub, priv, err = p.GenerateKeyPair(s, []*pkcs11.Mechanism{mechanism}, pubTemplate, privTemplate)
