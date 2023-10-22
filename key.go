@@ -12,12 +12,12 @@ import (
 type Key struct {
 	Type    string
 	Label   string
-	ckaId   string
-	Public  publicKeyTemplate
-	Private privateKeyTemplate
+	CKAID   string
+	Public  PublicKeyTemplate
+	Private PrivateKeyTemplate
 }
 
-type publicKeyTemplate struct {
+type PublicKeyTemplate struct {
 	Token       bool
 	Encrypt     bool
 	Verify      bool
@@ -27,7 +27,7 @@ type publicKeyTemplate struct {
 	Curve       string
 }
 
-type privateKeyTemplate struct {
+type PrivateKeyTemplate struct {
 	Token       bool
 	Private     bool
 	Subject     string
@@ -47,7 +47,7 @@ func CreateKey(p *pkcs11.Ctx, s pkcs11.SessionHandle, k Key) (pub pkcs11.ObjectH
 		pkcs11.NewAttribute(pkcs11.CKA_WRAP, k.Public.Wrap),
 		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, k.Public.Token),
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, k.Label),
-		pkcs11.NewAttribute(pkcs11.CKA_ID, []byte(k.ckaId)),
+		pkcs11.NewAttribute(pkcs11.CKA_ID, []byte(k.CKAID)),
 	}
 	privTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, k.Private.Token),
@@ -58,7 +58,7 @@ func CreateKey(p *pkcs11.Ctx, s pkcs11.SessionHandle, k Key) (pub pkcs11.ObjectH
 		pkcs11.NewAttribute(pkcs11.CKA_SIGN, k.Private.Sign),
 		pkcs11.NewAttribute(pkcs11.CKA_UNWRAP, k.Private.Unwrap),
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, k.Label),
-		pkcs11.NewAttribute(pkcs11.CKA_ID, []byte(k.ckaId)),
+		pkcs11.NewAttribute(pkcs11.CKA_ID, []byte(k.CKAID)),
 	}
 
 	// Encode ASN.1 key parameters to DER
@@ -66,7 +66,7 @@ func CreateKey(p *pkcs11.Ctx, s pkcs11.SessionHandle, k Key) (pub pkcs11.ObjectH
 	if k.Type == "EC" || k.Type == "ECDSA" {
 		derCurve, err = asn1.Marshal(ellipticCurve[k.Public.Curve])
 		if err != nil {
-			err = fmt.Errorf("Error marshalling curve (%s)", err.Error())
+			err = fmt.Errorf("error marshalling curve (%s)", err.Error())
 			return
 		}
 	}
@@ -93,13 +93,13 @@ func CreateKey(p *pkcs11.Ctx, s pkcs11.SessionHandle, k Key) (pub pkcs11.ObjectH
 		pubTemplate = append(pubTemplate, pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, k.Public.Exponent.Bytes()))
 
 	default:
-		err = fmt.Errorf("Configured key type '%s' is supported", k.Type)
+		err = fmt.Errorf("configured key type '%s' is supported", k.Type)
 		return
 	}
 
 	pub, priv, err = p.GenerateKeyPair(s, []*pkcs11.Mechanism{mechanism}, pubTemplate, privTemplate)
 	if err != nil {
-		err = fmt.Errorf("GenerateKeyPair failed (%s)", err.Error())
+		err = fmt.Errorf("generateKeyPair failed (%s)", err.Error())
 		return
 	}
 
