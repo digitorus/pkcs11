@@ -221,7 +221,7 @@ func GetPublic(p *pkcs11.Ctx, s pkcs11.SessionHandle, ckaId []byte) (pub crypto.
 
 func GetObjects(p *pkcs11.Ctx, s pkcs11.SessionHandle, ot interface{}, ckaId []byte, limit int) (objs []Object, err error) {
 	// If we want to select a type, this should be uint
-	t, usetType := ot.(uint)
+	t, usetType := ot.(int)
 
 	if usetType && len(ckaId) > 0 {
 		fmt.Printf("Selecting objects of type %s with CKA_ID %x\n", objectType[t], ckaId)
