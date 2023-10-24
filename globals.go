@@ -35,7 +35,7 @@ var ellipticCurve = map[string]asn1.ObjectIdentifier{
 	"brainpoolP512r1": {1, 3, 36, 3, 3, 2, 8, 1, 1, 13},
 }
 
-var objectType = map[uint]string{
+var objectType = map[int]string{
 	pkcs11.CKO_DATA:              "CKO_DATA",
 	pkcs11.CKO_CERTIFICATE:       "CKO_CERTIFICATE",
 	pkcs11.CKO_PUBLIC_KEY:        "CKO_PUBLIC_KEY",
