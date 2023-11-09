@@ -48,7 +48,6 @@ func (priv *PrivateKey) Public() crypto.PublicKey {
 
 // Sign delegates the signing of 'msg' to the PKCS11 library.
 func (priv *PrivateKey) Sign(rand io.Reader, msg []byte, opts crypto.SignerOpts) (sig []byte, err error) {
-	var mStr string
 	var mechanism *pkcs11.Mechanism
 	var orgMsg = make([]byte, len(msg))
 
@@ -65,13 +64,11 @@ func (priv *PrivateKey) Sign(rand io.Reader, msg []byte, opts crypto.SignerOpts)
 	// Pre Signing
 	switch publicKey.(type) {
 	case *rsa.PublicKey:
-		mStr = "CKM_RSA_PKCS"
 		mechanism = pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)
 
 		// DigestInfo (PKCS1v15)
 		msg = append(hashPrefixes[opts.HashFunc()], msg...)
 	case *ecdsa.PublicKey:
-		mStr = "CKM_ECDSA"
 		mechanism = pkcs11.NewMechanism(pkcs11.CKM_ECDSA, nil)
 	default:
 		err = fmt.Errorf("Only RSA and ECDSA keys are supported")
@@ -88,7 +85,6 @@ func (priv *PrivateKey) Sign(rand io.Reader, msg []byte, opts crypto.SignerOpts)
 	}
 
 	// Signing Initiation
-	fmt.Printf("Signing %d bytes with %s\n", len(msg), mStr)
 	err = priv.ctx.SignInit(priv.sessionHandle, []*pkcs11.Mechanism{mechanism}, keyId)
 	if err != nil {
 		err = fmt.Errorf("Signing Initiation failed (%s)", err.Error())
@@ -102,8 +98,6 @@ func (priv *PrivateKey) Sign(rand io.Reader, msg []byte, opts crypto.SignerOpts)
 		return
 	}
 
-	fmt.Printf("Signature (%d bytes): %x\n", len(sig), sig)
-
 	// Post Signing
 	switch pub := publicKey.(type) {
 	case *rsa.PublicKey:
@@ -113,8 +107,6 @@ func (priv *PrivateKey) Sign(rand io.Reader, msg []byte, opts crypto.SignerOpts)
 		}
 
 	case *ecdsa.PublicKey:
-		fmt.Printf("ECDSA Signature (%d bytes): %x\n", len(sig), sig)
-
 		// Marshal ECDSA signature
 		r := new(big.Int).SetBytes(sig[:len(sig)/2])
 		s := new(big.Int).SetBytes(sig[len(sig)/2:])
