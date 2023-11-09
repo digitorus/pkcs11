@@ -79,24 +79,22 @@ func GetPublic(p *pkcs11.Ctx, s pkcs11.SessionHandle, ckaId []byte) (pub crypto.
 		return nil, fmt.Errorf("Can't select public key without CKA_ID")
 	}
 
-	fmt.Printf("Selecting objects with type CKO_PUBLIC_KEY with CKA_ID %x\n", ckaId)
-
 	// find objects
 	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
 		pkcs11.NewAttribute(pkcs11.CKA_ID, ckaId)}
 	err = p.FindObjectsInit(s, template)
 	if err != nil {
-		fmt.Printf("FindObjectsInit failed (%v)\n", err)
+		err = fmt.Errorf("FindObjectsInit failed (%v)\n", err)
 		return
 	}
 	obj, _, err := p.FindObjects(s, 1)
 	if err != nil {
-		fmt.Printf("FindObjects failed (%v)\n", err)
+		err = fmt.Errorf("FindObjects failed (%v)\n", err)
 		return
 	}
 	err = p.FindObjectsFinal(s)
 	if err != nil {
-		fmt.Printf("FindObjectsFinal failed (%v)\n", err)
+		err = fmt.Errorf("FindObjectsFinal failed (%v)\n", err)
 		return
 	}
 
@@ -223,16 +221,6 @@ func GetObjects(p *pkcs11.Ctx, s pkcs11.SessionHandle, ot interface{}, ckaId []b
 	// If we want to select a type, this should be uint
 	t, usetType := ot.(int)
 
-	if usetType && len(ckaId) > 0 {
-		fmt.Printf("Selecting objects of type %s with CKA_ID %x\n", objectType[t], ckaId)
-	} else if len(ckaId) > 0 {
-		fmt.Printf("Selecting objects with CKA_ID %x\n", ckaId)
-	} else if usetType {
-		fmt.Printf("Selecting objects of type %s\n", objectType[t])
-	} else {
-		fmt.Printf("Selecting all objects\n")
-	}
-
 	// find objects
 	var template []*pkcs11.Attribute
 	if usetType {
@@ -244,17 +232,17 @@ func GetObjects(p *pkcs11.Ctx, s pkcs11.SessionHandle, ot interface{}, ckaId []b
 
 	err = p.FindObjectsInit(s, template)
 	if err != nil {
-		fmt.Printf("FindObjectsInit failed (%v)\n", err)
+		err = fmt.Errorf("FindObjectsInit failed (%v)\n", err)
 		return
 	}
 	obj, _, err := p.FindObjects(s, limit)
 	if err != nil {
-		fmt.Printf("FindObjects failed (%v)\n", err)
+		err = fmt.Errorf("FindObjects failed (%v)\n", err)
 		return
 	}
 	err = p.FindObjectsFinal(s)
 	if err != nil {
-		fmt.Printf("FindObjectsFinal failed (%v)\n", err)
+		err = fmt.Errorf("FindObjectsFinal failed (%v)\n", err)
 		return
 	}
 
@@ -278,7 +266,7 @@ func GetObjects(p *pkcs11.Ctx, s pkcs11.SessionHandle, ot interface{}, ckaId []b
 	for _, id := range obj {
 		attr, err := p.GetAttributeValue(s, id, template)
 		if err != nil {
-			fmt.Printf("Failed to get attribute value of object %s\n", err.Error())
+			err = fmt.Errorf("Failed to get attribute value of object %s\n", err.Error())
 		}
 		var o Object
 		o.Id = id
@@ -431,8 +419,6 @@ func GetCert(p *pkcs11.Ctx, s pkcs11.SessionHandle, ckaId []byte) (cert *x509.Ce
 
 	// If we have multiple certificates with the same ckaID, ask to select one
 	if len(objs) > 1 {
-		fmt.Println("Which certificate would you like to use:")
-
 		// For each certificate
 		certs := make(map[int]*x509.Certificate, len(objs))
 		for i, o := range objs {
@@ -441,7 +427,6 @@ func GetCert(p *pkcs11.Ctx, s pkcs11.SessionHandle, ckaId []byte) (cert *x509.Ce
 				err = fmt.Errorf("error parsing certificate data from PKCS#11: %s", err.Error())
 				break
 			}
-			fmt.Printf("[%d] %x [%s] (%s)\n", i, certs[i].Subject.CommonName, certs[i].SubjectKeyId, certs[i].Issuer.CommonName)
 		}
 
 		// Ask to select a certificate
